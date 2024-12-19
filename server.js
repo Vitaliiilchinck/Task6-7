@@ -1,5 +1,5 @@
 const { ChatServer } = require('./server/ChatServer');
 
-const chatServer = new ChatServer({ port: 4108 });
+const chatServer = new ChatServer({ port: 2109 });
 
 chatServer.init();

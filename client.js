@@ -13,7 +13,7 @@ if (!name || !key) {
     process.exit(1);
 }
 
-const client = new ChatClient({ url: 'ws://localhost:8080', username: name, sessionId, key });
+const client = new ChatClient({ url: 'ws://localhost:2109', username: name, sessionId, key });
 client.init();
 
 const rl = readline.createInterface({
