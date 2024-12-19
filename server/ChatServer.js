@@ -22,7 +22,10 @@ class ChatServer {
         console.log('New connection established');
 
         ws.on('message', (data) => this.onMessage(ws, data));
-        ws.on('close', () => console.log('A client disconnected'));
+        ws.on('close', () => {
+            console.log('A client disconnected');
+            this.removeClient(ws);
+        });
     }
 
     onMessage(ws, data) {
@@ -31,6 +34,9 @@ class ChatServer {
             msgObject = JSON.parse(data.toString());
         } catch (e) {
             console.error('Invalid message format:', e);
+            ws.send(
+                JSON.stringify({ type: 'error', data: 'Invalid message format' })
+            );
             return;
         }
 
@@ -44,7 +50,7 @@ class ChatServer {
                 this.createClient(ws, msgObject);
                 break;
             default:
-                console.log('Unknown message type:', msgObject.type);
+                console.warn('Unknown message type:', msgObject.type);
         }
     }
 
@@ -54,6 +60,13 @@ class ChatServer {
         if (existingClient) {
             existingClient.updateWS(ws);
             console.log(`Client ${existingClient.username} reconnected`);
+            return;
+        }
+
+        if (!msgObject.data?.username) {
+            ws.send(
+                JSON.stringify({ type: 'error', data: 'Username is required' })
+            );
             return;
         }
 
@@ -74,20 +87,37 @@ class ChatServer {
             return;
         }
 
+        const messageToSend = {
+            type: 'message',
+            data: {
+                sender: sender.username,
+                message: msgObject.data,
+            },
+        };
+
         this.clientsMap.forEach((client) => {
             if (
                 client.ws.readyState === WebSocket.OPEN &&
                 client.sessionId !== msgObject.sessionId
             ) {
-                client.send({
-                    type: 'message',
-                    data: {
-                        sender: sender.username,
-                        message: msgObject.data,
-                    },
-                });
+                client.send(messageToSend);
             }
         });
+
+        console.log(
+            `Broadcast message from ${sender.username}: ${msgObject.data}`
+        );
+    }
+
+    removeClient(ws) {
+        // Find and remove the client associated with the WebSocket
+        for (const [sessionId, client] of this.clientsMap.entries()) {
+            if (client.ws === ws) {
+                this.clientsMap.delete(sessionId);
+                console.log(`Client ${client.username} disconnected`);
+                break;
+            }
+        }
     }
 }
 
